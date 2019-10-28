@@ -71,8 +71,10 @@ const isTouchEvent = ( event ) => 'TouchEvent' in window && event instanceof Tou
 const dragStart = () => {
 	
 	dragEnd();
-	document.addEventListener( 'mousemove', dragging );
+	document.addEventListener( 'mousemove', dragging, { passive: false } );
+	document.addEventListener( 'touchmove', dragging, { passive: false } );
 	document.addEventListener( 'mouseup', dragEnd );
+	document.addEventListener( 'touchend', dragEnd );
 
 }
 const dragging = ( event ) => {
@@ -97,12 +99,15 @@ const dragEnd = () => {
 
 	prevMousePosition.copy( mousePosition );
 	mouseDirection.set( 0, 0 );
-	document.removeEventListener( 'mousemove', dragging );
+	document.removeEventListener( 'mousemove', dragging, { passive: false } );
+	document.removeEventListener( 'touchmove', dragging, { passive: false } );
 	document.removeEventListener( 'mouseup', dragEnd );
+	document.removeEventListener( 'touchend', dragEnd );
 
 }
 
 renderer.domElement.addEventListener( 'mousedown', dragStart );
+renderer.domElement.addEventListener( 'touchstart', dragStart );
 
 const colorTexture = new THREE.TextureLoader().load( './kodim23.jpg' );
 const finalQuad = new THREE.Mesh(
