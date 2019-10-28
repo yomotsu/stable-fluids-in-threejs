@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>=^.^=</title>
+<style>
+body {margin: 0;}
+canvas {display: block;}
+</style>
+</head>
+<body>
+
+<canvas></canvas>
+
+<script type="module">
+// Stable Fluids
+// http://nishitalab.org/user/nis/ourworks/fluid/FludDynamics.html
+// https://el-ement.com/blog/2015/03/16/gpu-fluid/
+// https://shikihuiku.wordpress.com/2013/04/15/stable-fluids/
+// https://shikihuiku.wordpress.com/2013/04/24/stable-fluids2/
+// https://29a.ch/2012/12/16/webgl-fluid-simulation
+// http://jamie-wong.com/2016/08/05/webgl-fluid-simulation/
+
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
+import {
+	resolution,
+	mouseDirection,
+	mousePosition,
+	prevMousePosition,
+} from './js/params.js';
+import { FrameBufferObjects } from './js/FrameBufferObjects.js';
+import { advectVelocity           } from './js/1_advectVelocity.js';
+import { addForce                 } from './js/2_addForce.js';
+import { divergence               } from './js/3_divergence.js';
+import { pressure                 } from './js/4_pressure.js';
+import { subtractPressureGradient } from './js/5_subtractPressureGradient.js';
+
+const SCREEN_QUAD_GEOMETRY = new THREE.PlaneBufferGeometry( 2, 2 );
+const SCREEN_QUAD_VERTEX_SHADER = `
+attribute vec3 position;
+attribute vec2 uv;
+varying vec2 v_uv;
+
+void main() {
+
+	gl_Position = vec4( position, 1.0 );
+	v_uv = uv;
+
+}`;
+
+const width  = resolution.x;
+const height = resolution.y;
+
+const clock = new THREE.Clock();
+
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+const renderer = new THREE.WebGLRenderer( { canvas: document.querySelector( 'canvas' ) } );
+renderer.setSize( width, height );
+renderer.autoClear = false;
+document.body.appendChild( renderer.domElement );
+
+const velocityFBOs = new FrameBufferObjects( renderer );
+const divergenceFBOs = new FrameBufferObjects( renderer );
+const pressureFBOs = new FrameBufferObjects( renderer );
+
+
+const isTouchEvent = ( event ) => 'TouchEvent' in window && event instanceof TouchEvent;
+
+const dragStart = () => {
+	
+	dragEnd();
+	document.addEventListener( 'mousemove', dragging );
+	document.addEventListener( 'mouseup', dragEnd );
+
+}
+const dragging = ( event ) => {
+	
+	event.preventDefault();
+	const _event = isTouchEvent( event ) ? event.touches[ 0 ] : event;
+
+	prevMousePosition.copy( mousePosition );
+
+	const width = resolution.x;
+	const height = resolution.y;
+	const domRect = renderer.domElement.getBoundingClientRect();
+	mousePosition.set(
+		THREE.Math.clamp( ( _event.clientX - domRect.x ), 0, width ),
+		height - THREE.Math.clamp( ( _event.clientY - domRect.y ), 0, height ),
+	);
+
+	mouseDirection.subVectors( mousePosition, prevMousePosition ).normalize();
+
+}
+const dragEnd = () => {
+
+	prevMousePosition.copy( mousePosition );
+	mouseDirection.set( 0, 0 );
+	document.removeEventListener( 'mousemove', dragging );
+	document.removeEventListener( 'mouseup', dragEnd );
+
+}
+
+renderer.domElement.addEventListener( 'mousedown', dragStart );
+
+const finalQuad = new THREE.Mesh(
+	SCREEN_QUAD_GEOMETRY,
+	new THREE.RawShaderMaterial( {
+		uniforms: {
+			u_resolution: { value: resolution },
+			u_velocityTexture: { value: null },
+			u_divergenceTexture: { value: null },
+			u_pressureTexture: { value: null },
+			u_finalVelocityTexture: { value: null },
+		},
+		vertexShader: SCREEN_QUAD_VERTEX_SHADER,
+		fragmentShader: `
+			precision mediump float;
+			uniform vec2 u_resolution;
+			uniform sampler2D u_velocityTexture;
+			uniform sampler2D u_divergenceTexture;
+			uniform sampler2D u_pressureTexture;
+			uniform sampler2D u_finalVelocityTexture;
+			varying vec2 v_uv;
+		
+			void main () {
+
+				vec2 uv = v_uv;
+
+				vec2 velocity = texture2D( u_velocityTexture, uv ).xy;
+				// vec4 color = texture2D( u_divergenceTexture, uv );
+				// vec4 color = texture2D( u_pressureTexture, uv );
+				// vec4 color = texture2D( u_finalVelocityTexture, uv );
+
+				// gl_FragColor = vec4( color.www, 1 );
+				// gl_FragColor = vec4( color.xy, 0., 1. );
+				// gl_FragColor = vec4( -color.xy, 0., 1. );
+				// gl_FragColor = vec4( color.xyz, 1. );
+				// gl_FragColor = vec4( color.wz, 0., 1. );
+				// gl_FragColor = vec4( color.zz, 0., 1. );
+				// gl_FragColor = vec4( color.xyz, 1. );
+				
+				gl_FragColor = vec4(
+					( ( texture2D( u_velocityTexture, uv ) + 1.0 ) * 0.5 ).xy,
+					1.,
+					1.
+				);
+
+				// gl_FragColor = vec4(
+				// 	( texture2D( u_pressureTexture, uv ) ).x,
+				// 	( ( texture2D( u_velocityTexture, uv ) + 1.0 ) * 0.5 ).xy,
+				// 	1.
+				// );
+			}
+		`
+	} ),
+);
+
+scene.add( finalQuad );
+
+
+( function anim () {
+
+	const deltaTime = clock.getDelta();
+	const elapsed = clock.elapsedTime;
+
+	// if ( elapsed > 30 ) { return; }
+
+	requestAnimationFrame( anim );
+
+	const args = [ deltaTime, { velocityFBOs, divergenceFBOs, pressureFBOs } ];
+	advectVelocity( ...args );
+	addForce( ...args );
+	divergence( ...args );
+	pressure( ...args );
+	subtractPressureGradient( ...args );
+
+	finalQuad.material.uniforms.u_velocityTexture.value   = velocityFBOs.readBuffer.texture;
+	finalQuad.material.uniforms.u_divergenceTexture.value = divergenceFBOs.readBuffer.texture;
+	finalQuad.material.uniforms.u_pressureTexture.value = pressureFBOs.readBuffer.texture;
+	renderer.setRenderTarget( null );
+	renderer.render( scene, camera );
+	
+} )();
+</script>
+</body>
+</html>
