@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>=^.^=</title>
 <style>
-body {margin: 0;}
+body {
+	margin: 0;
+	overscroll-behavior: none;
+}
 canvas {display: block;}
 </style>
 </head>
@@ -23,6 +26,7 @@ canvas {display: block;}
 // http://jamie-wong.com/2016/08/05/webgl-fluid-simulation/
 
 import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
+import { DEBUG_MODE } from './js/constants.js';
 import {
 	resolution,
 	mouseDirection,
@@ -170,7 +174,7 @@ scene.add( finalQuad );
 	const deltaTime = clock.getDelta();
 	const elapsed = clock.elapsedTime;
 
-	if ( elapsed > 30 ) { return; }
+	if ( DEBUG_MODE && elapsed > 30 ) { return; }
 
 	requestAnimationFrame( anim );
 

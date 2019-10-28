@@ -1,10 +1,4 @@
-import {
-	Vector2,
-} from 'https://unpkg.com/three@0.109.0/build/three.module.js';
-
-const THREE = {
-	Vector2,
-};
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 
 // const width  = 512;
 // const height = 512;

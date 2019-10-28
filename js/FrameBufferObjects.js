@@ -1,22 +1,4 @@
-import {
-	RGBAFormat,
-	HalfFloatType,
-	FloatType,
-	UnsignedByteType,
-	Vector2,
-	OrthographicCamera,
-	WebGLRenderTarget,
-} from 'https://unpkg.com/three@0.109.0/build/three.module.js';
-
-const THREE = {
-	RGBAFormat,
-	UnsignedByteType,
-	FloatType,
-	HalfFloatType,
-	Vector2,
-	OrthographicCamera,
-	WebGLRenderTarget,
-};
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 
 export const FrameBufferObjects = class FrameBufferObjects {
 

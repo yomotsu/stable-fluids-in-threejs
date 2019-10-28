@@ -1,10 +1,4 @@
-import {
-	PlaneBufferGeometry,
-} from 'https://unpkg.com/three@0.109.0/build/three.module.js';
-
-const THREE = {
-	PlaneBufferGeometry,
-};
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 
 export const SCREEN_QUAD_GEOMETRY = new THREE.PlaneBufferGeometry( 2, 2 );
 export const SCREEN_QUAD_VERTEX_SHADER = `

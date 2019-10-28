@@ -1,8 +1,4 @@
-import {
-	Scene,
-	Mesh,
-	RawShaderMaterial,
-} from 'https://unpkg.com/three@0.109.0/build/three.module.js';
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 import {
 	mouseDirection,
 	mousePosition,
@@ -12,12 +8,6 @@ import {
 	SCREEN_QUAD_GEOMETRY,
 	SCREEN_QUAD_VERTEX_SHADER,
 } from './screen-quad-util.js';
-
-const THREE = {
-	Scene,
-	Mesh,
-	RawShaderMaterial,
-};
 
 const addForceQuad = new THREE.Mesh(
 	SCREEN_QUAD_GEOMETRY,

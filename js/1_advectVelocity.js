@@ -1,8 +1,4 @@
-import {
-	Scene,
-	Mesh,
-	RawShaderMaterial,
-} from 'https://unpkg.com/three@0.109.0/build/three.module.js';
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 import {
 	resolution,
 } from './params.js';
@@ -10,12 +6,6 @@ import {
 	SCREEN_QUAD_GEOMETRY,
 	SCREEN_QUAD_VERTEX_SHADER,
 } from './screen-quad-util.js';
-
-const THREE = {
-	Scene,
-	Mesh,
-	RawShaderMaterial,
-};
 
 // 1. advectVelocity: 移流
 // 発生しているvelocity分ずらす
