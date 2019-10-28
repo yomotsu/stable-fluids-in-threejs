@@ -7,6 +7,7 @@
 <style>
 body {
 	margin: 0;
+	overflow: hidden;
 	overscroll-behavior: none;
 }
 canvas {display: block;}
@@ -72,8 +73,9 @@ const pressureFBOs = new FrameBufferObjects( renderer );
 
 const isTouchEvent = ( event ) => 'TouchEvent' in window && event instanceof TouchEvent;
 
-const dragStart = () => {
+const dragStart = ( event ) => {
 	
+	event.preventDefault();
 	dragEnd();
 	document.addEventListener( 'mousemove', dragging, { passive: false } );
 	document.addEventListener( 'touchmove', dragging, { passive: false } );
