@@ -92,10 +92,14 @@ const colorTexture = new THREE.TextureLoader().load( './kodim23.jpg', ( colorTex
 	const initialColorTextureScene = new THREE.Scene();
 	initialColorTextureScene.add( initialColorTextureQuad );
 	
-	// 最初に一度だけテクスチャを焼き付ける
-	colorTextureFBOs.render( initialColorTextureScene );
-	colorTextureFBOs.swapBuffers();
+	const initColorTexture = () => {
+		colorTextureFBOs.render( initialColorTextureScene );
+		colorTextureFBOs.swapBuffers();
+	};
 
+	// 最初に一度だけテクスチャを焼き付ける。initColorTextureはループ内には組み込まない。
+	initColorTexture();
+	window.addEventListener( 'resize', initColorTexture );
 
 	const colorTextureQuad = new THREE.Mesh(
 		SCREEN_QUAD_GEOMETRY,
@@ -118,7 +122,7 @@ const colorTexture = new THREE.TextureLoader().load( './kodim23.jpg', ( colorTex
 
 					vec2 uv = v_uv;
 					vec2 velocity = texture2D( u_velocityTexture, uv ).xy;
-					vec4 color = texture2D( u_colorTexture, uv - velocity * 0.1 );
+					vec4 color = texture2D( u_colorTexture, uv - velocity * 0.005 );
 					
 					gl_FragColor = vec4( color.xyz, 1.0 );
 
