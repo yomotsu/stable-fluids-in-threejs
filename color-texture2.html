@@ -4,28 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>=^.^=</title>
-<style>
-body {
-	margin: 0;
-	overflow: hidden;
-	overscroll-behavior: none;
-}
-canvas {display: block;}
-</style>
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
 <canvas></canvas>
 
 <script type="module">
-// Stable Fluids
-// http://nishitalab.org/user/nis/ourworks/fluid/FludDynamics.html
-// https://el-ement.com/blog/2015/03/16/gpu-fluid/
-// https://shikihuiku.wordpress.com/2013/04/15/stable-fluids/
-// https://shikihuiku.wordpress.com/2013/04/24/stable-fluids2/
-// https://29a.ch/2012/12/16/webgl-fluid-simulation
-// http://jamie-wong.com/2016/08/05/webgl-fluid-simulation/
-
 import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
 import { DEBUG_MODE } from './js/constants.js';
 import {
