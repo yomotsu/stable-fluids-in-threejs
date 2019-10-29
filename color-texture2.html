@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>=^.^=</title>
+<style>
+body {
+	margin: 0;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+canvas {display: block;}
+</style>
+</head>
+<body>
+
+<canvas></canvas>
+
+<script type="module">
+// Stable Fluids
+// http://nishitalab.org/user/nis/ourworks/fluid/FludDynamics.html
+// https://el-ement.com/blog/2015/03/16/gpu-fluid/
+// https://shikihuiku.wordpress.com/2013/04/15/stable-fluids/
+// https://shikihuiku.wordpress.com/2013/04/24/stable-fluids2/
+// https://29a.ch/2012/12/16/webgl-fluid-simulation
+// http://jamie-wong.com/2016/08/05/webgl-fluid-simulation/
+
+import * as THREE from 'https://unpkg.com/three@0.109.0/build/three.module.js';
+import { DEBUG_MODE } from './js/constants.js';
+import {
+	SCREEN_QUAD_GEOMETRY,
+	SCREEN_QUAD_VERTEX_SHADER,
+} from './js/screen-quad-util.js';
+import {
+	resolution,
+	mouseDirection,
+	mousePosition,
+	prevMousePosition,
+} from './js/params.js';
+import {
+	clock,
+	scene,
+	camera,
+	renderer,
+} from './js/trhee-common.js';
+import { FrameBufferObjects } from './js/FrameBufferObjects.js';
+import { advectVelocity           } from './js/1_advectVelocity.js';
+import { addForce                 } from './js/2_addForce.js';
+import { divergence               } from './js/3_divergence.js';
+import { pressure                 } from './js/4_pressure.js';
+import { subtractPressureGradient } from './js/5_subtractPressureGradient.js';
+
+const velocityFBOs = new FrameBufferObjects( renderer );
+const divergenceFBOs = new FrameBufferObjects( renderer );
+const pressureFBOs = new FrameBufferObjects( renderer );
+const colorTextureFBOs = new FrameBufferObjects( renderer );
+
+const colorTexture = new THREE.TextureLoader().load( './kodim23.jpg', ( colorTexture ) => {
+
+	const initialColorTextureQuad = new THREE.Mesh(
+		SCREEN_QUAD_GEOMETRY,
+		new THREE.RawShaderMaterial( {
+			uniforms: {
+				u_resolution     : { value: resolution },
+				u_velocityTexture: { value: null },
+				u_colorTexture   : { value: colorTexture },
+				u_colorTextureAspect: { value: 512 / 768 },
+			},
+			vertexShader: SCREEN_QUAD_VERTEX_SHADER,
+			fragmentShader: `
+				precision highp float;
+
+				uniform vec2 u_resolution;
+				uniform sampler2D u_colorTexture;
+				uniform float u_colorTextureAspect;
+				varying vec2 v_uv;
+
+				void main( void ) {
+
+					vec2 uv = v_uv;
+					vec2 colorTextureAspect = vec2( u_resolution.x / u_resolution.y * u_colorTextureAspect, 1.0 );
+					vec4 color = texture2D( u_colorTexture, fract( uv * colorTextureAspect ) );
+
+					// gl_FragColor = vec4( uv, 1.0, 1.0 );
+					gl_FragColor = vec4( color.xyz, 1.0 );
+
+				}
+			`
+		} ),
+	);
+	const initialColorTextureScene = new THREE.Scene();
+	initialColorTextureScene.add( initialColorTextureQuad );
+	
+	// 最初に一度だけテクスチャを焼き付ける
+	colorTextureFBOs.render( initialColorTextureScene );
+	colorTextureFBOs.swapBuffers();
+
+
+	const colorTextureQuad = new THREE.Mesh(
+		SCREEN_QUAD_GEOMETRY,
+		new THREE.RawShaderMaterial( {
+			uniforms: {
+				u_resolution     : { value: resolution },
+				u_velocityTexture: { value: null },
+				u_colorTexture   : { value: null },
+			},
+			vertexShader: SCREEN_QUAD_VERTEX_SHADER,
+			fragmentShader: `
+				precision highp float;
+
+				uniform vec2 u_resolution;
+				uniform sampler2D u_velocityTexture;
+				uniform sampler2D u_colorTexture;
+				varying vec2 v_uv;
+
+				void main( void ) {
+
+					vec2 uv = v_uv;
+					vec2 velocity = texture2D( u_velocityTexture, uv ).xy;
+					vec4 color = texture2D( u_colorTexture, uv - velocity * 0.1 );
+					
+					gl_FragColor = vec4( color.xyz, 1.0 );
+
+				}
+			`
+		} ),
+	);
+	const colorTextureScene = new THREE.Scene();
+	colorTextureScene.add( colorTextureQuad );
+
+	const updateColorTexture = () => {
+
+		colorTextureQuad.material.uniforms.u_velocityTexture.value = velocityFBOs.readBuffer.texture;
+		colorTextureQuad.material.uniforms.u_colorTexture.value = colorTextureFBOs.readBuffer.texture;
+		colorTextureFBOs.render( colorTextureScene );
+		colorTextureFBOs.swapBuffers();
+
+	};
+
+	const finalQuad = new THREE.Mesh(
+		SCREEN_QUAD_GEOMETRY,
+		new THREE.RawShaderMaterial( {
+			uniforms: {
+				u_colorTexture: { value: colorTexture },
+			},
+			vertexShader: SCREEN_QUAD_VERTEX_SHADER,
+			fragmentShader: `
+				precision highp float;
+
+				uniform sampler2D u_colorTexture;
+				varying vec2 v_uv;
+			
+				void main () {
+
+					vec2 uv = v_uv;
+					vec4 color = texture2D( u_colorTexture, uv );
+					gl_FragColor = vec4( color.xyz, 1.0 );
+
+				}
+			`
+		} ),
+	);
+
+	scene.add( finalQuad );
+
+
+	( function anim () {
+
+		const deltaTime = clock.getDelta();
+		const elapsed = clock.elapsedTime;
+
+		if ( DEBUG_MODE && elapsed > 30 ) { return; }
+
+		requestAnimationFrame( anim );
+
+		const args = [ deltaTime, { velocityFBOs, divergenceFBOs, pressureFBOs } ];
+		advectVelocity( ...args );
+		addForce( ...args );
+		divergence( ...args );
+		pressure( ...args );
+		subtractPressureGradient( ...args );
+		updateColorTexture();
+	
+		finalQuad.material.uniforms.u_colorTexture.value = colorTextureFBOs.readBuffer.texture;
+		renderer.setRenderTarget( null );
+		renderer.render( scene, camera );
+		
+	} )();
+
+} );
+</script>
+</body>
+</html>

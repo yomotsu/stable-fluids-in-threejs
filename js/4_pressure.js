@@ -60,7 +60,7 @@ const pressureQuad = new THREE.Mesh(
 const pressureScene = new THREE.Scene();
 pressureScene.add( pressureQuad );
 
-const SOLVER_ITERATION = 32;
+const SOLVER_ITERATION = 8;
 export const pressure = ( deltaTime, { velocityFBOs, divergenceFBOs, pressureFBOs } ) => {
 
 	// 繰り返して精度を上げる
